@@ -18,3 +18,14 @@ def test_build_session_plan():
     assert plan[4] == ("work", 1500)
     assert plan[7] == ("long_break", 900)
     assert len(plan) == 8
+
+
+def run_all_tests():
+    test_format_time()
+    test_get_break_type()
+    test_build_session_plan()
+    print("All tests passed.")
+
+
+if __name__ == "__main__":
+    run_all_tests()
