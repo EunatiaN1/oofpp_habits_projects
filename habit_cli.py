@@ -18,7 +18,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=os.environ.get("HABIT_DB", "habits.sqlite3"),
         help="SQLite database path (default: habits.sqlite3 or HABIT_DB)",
     )
-    commands = parser.add_subparsers(dest="command", required=True)
+    commands = parser.add_subparsers(dest="command")
 
     initialize = commands.add_parser("init", help="Add five predefined habits and sample history")
     initialize.add_argument(
@@ -86,7 +86,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                     print(f"Initialized {seeded} predefined habits {suffix}.")
                 else:
                     print("Habits already exist; defaults were not added.")
-            elif args.command == "list":
+            elif args.command in (None, "list"):
                 habits = store.list_habits()
                 if not habits:
                     print("No habits found. Run 'python3 habit_cli.py init' to add the predefined habits.")

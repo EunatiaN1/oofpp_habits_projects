@@ -120,3 +120,11 @@ def test_cli_supports_init_create_complete_analyze_and_delete(tmp_path, capsys):
     assert main(["--db", database, "analyze", "Walk", "--days", "1"]) == 0
     assert "Walk (daily): 100% (1/1 periods)" in capsys.readouterr().out
     assert main(["--db", database, "delete", "Walk"]) == 0
+
+
+def test_cli_without_subcommand_lists_habits_with_initialization_hint(tmp_path, capsys):
+    database = str(tmp_path / "habits.sqlite3")
+
+    assert main(["--db", database]) == 0
+
+    assert "No habits found" in capsys.readouterr().out

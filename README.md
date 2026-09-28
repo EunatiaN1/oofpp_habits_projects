@@ -33,6 +33,8 @@ Initialize the default habits and four weeks of example data:
 python3 habit_cli.py init
 ```
 
+Running `python3 habit_cli.py` without a command lists existing habits and suggests initialization if the database is empty.
+
 The database is stored in `habits.sqlite3` in the project directory. To create the five predefined habits without sample completions, run `python3 habit_cli.py init --no-sample-data` instead.
 
 ```bash
@@ -47,6 +49,15 @@ python3 habit_cli.py delete "Stretch"
 Weekly habits use Monday-to-Sunday calendar weeks and can be completed once per week. Analytics default to a trailing 28-day window; set `--days` to change the window or pass a habit name to analyze only that habit. Use `--db PATH` before the command to select another SQLite database.
 
 ## Test
+
+Install the test dependency in the Python environment you use for this project:
+
+```bash
+python3 -m pip install -r requirements-dev.txt
+```
+
+Run the test modules through pytest (rather than running `test_habits.py` directly):
+
 ```bash
 python3 -m pytest -q
 ```
