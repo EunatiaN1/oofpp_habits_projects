@@ -1,0 +1,521 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f3f5f0">
+  <title>Pomodoro Habit Time Tracker</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --paper: #f3f5f0;
+      --surface: #fbfcf9;
+      --ink: #202a25;
+      --muted: #707b74;
+      --line: #dce2dc;
+      --focus: #cf4f39;
+      --rest: #167760;
+      --gold: #c78b2f;
+      --display: "Iowan Old Style", "Baskerville", Georgia, serif;
+      --body: "Avenir Next", "Gill Sans", "Trebuchet MS", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      min-width: 320px;
+      min-height: 100vh;
+      margin: 0;
+      color: var(--ink);
+      background-color: var(--paper);
+      background-image: linear-gradient(rgba(47, 76, 60, .035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(47, 76, 60, .035) 1px, transparent 1px);
+      background-size: 28px 28px;
+      font-family: var(--body);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button, input { font: inherit; }
+    button { color: inherit; }
+
+    .page { width: min(1120px, calc(100% - 64px)); margin: 0 auto; }
+
+    .topbar {
+      min-height: 82px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand-mark {
+      position: relative;
+      width: 29px;
+      height: 29px;
+      border: 1.5px solid var(--focus);
+      border-radius: 50%;
+    }
+    .brand-mark::before, .brand-mark::after {
+      position: absolute;
+      content: "";
+      border-radius: 50%;
+    }
+    .brand-mark::before { inset: 5px; background: var(--focus); }
+    .brand-mark::after { width: 5px; height: 5px; top: -3px; right: 1px; background: var(--gold); }
+    .brand-name { font-size: 13px; font-weight: 700; letter-spacing: .08em; }
+    .brand-caption, .date-label, .eyebrow, .phase-label, .session-kicker {
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .13em;
+      text-transform: uppercase;
+    }
+    .brand-caption { margin-top: 3px; font-size: 9px; }
+    .date-label { letter-spacing: .08em; }
+
+    .content { padding: 54px 0 38px; animation: arrive .55s ease-out both; }
+    .intro {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 32px;
+      margin-bottom: 43px;
+    }
+    .eyebrow { margin: 0 0 13px; color: var(--rest); }
+    h1 {
+      max-width: 620px;
+      margin: 0;
+      font-family: var(--display);
+      font-size: 43px;
+      font-weight: 400;
+      line-height: 1.08;
+    }
+    .intro-note { margin: 13px 0 0; color: var(--muted); font-size: 14px; }
+
+    .session-picker {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 11px 0 11px 18px;
+      border-left: 1px solid var(--line);
+    }
+    .session-picker label { max-width: 100px; color: var(--muted); font-size: 11px; line-height: 1.35; }
+    .session-picker input {
+      width: 62px;
+      height: 42px;
+      padding: 0 7px;
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      outline: none;
+      background: var(--surface);
+      color: var(--ink);
+      font-size: 17px;
+      text-align: center;
+    }
+    .session-picker input:focus-visible { border-color: var(--rest); box-shadow: 0 0 0 3px rgba(22, 119, 96, .12); }
+
+    .dashboard {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 305px;
+      gap: 72px;
+      align-items: start;
+    }
+
+    .timer-section { min-width: 0; border-top: 1px solid var(--line); }
+    .timer-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 58px;
+    }
+    .phase-label { display: flex; align-items: center; gap: 9px; color: var(--focus); }
+    .phase-label[data-kind="break"] { color: var(--rest); }
+    .phase-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+    .session-kicker { letter-spacing: .08em; }
+
+    .timer-area {
+      min-height: 345px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 0 20px;
+    }
+    .timer-ring {
+      --progress: 0;
+      --ring-color: var(--focus);
+      width: 260px;
+      aspect-ratio: 1;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: conic-gradient(var(--ring-color) calc(var(--progress) * 1%), #dce2dc 0);
+      transition: background .35s ease;
+    }
+    .timer-ring[data-kind="break"] { --ring-color: var(--rest); }
+    .timer-core {
+      width: calc(100% - 16px);
+      aspect-ratio: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      background: var(--paper);
+      box-shadow: inset 0 0 0 1px rgba(32, 42, 37, .035);
+    }
+    .timer-mode { color: var(--muted); font-size: 10px; font-weight: 700; letter-spacing: .16em; }
+    .timer-value {
+      margin: 8px 0 5px;
+      font-family: var(--display);
+      font-size: 64px;
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+    }
+    .timer-caption { color: var(--muted); font-size: 12px; }
+
+    .controls { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 21px; }
+    .button {
+      min-height: 46px;
+      padding: 0 23px;
+      border: 1px solid transparent;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 700;
+      transition: background .18s ease, border-color .18s ease, transform .18s ease;
+    }
+    .button:hover:not(:disabled) { transform: translateY(-1px); }
+    .button:focus-visible { outline: 3px solid rgba(22, 119, 96, .25); outline-offset: 2px; }
+    .button-primary { min-width: 142px; color: white; background: var(--ink); }
+    .button-primary:hover:not(:disabled) { background: #34483d; }
+    .button-secondary { color: var(--muted); border-color: var(--line); background: transparent; }
+    .button-secondary:hover:not(:disabled) { border-color: #aab6ad; color: var(--ink); }
+    .button:disabled { cursor: default; opacity: .5; }
+
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+    }
+    .stat { padding: 16px 18px 17px 0; }
+    .stat + .stat { padding-left: 18px; border-left: 1px solid var(--line); }
+    .stat-value { display: block; margin-bottom: 5px; font-family: var(--display); font-size: 25px; font-variant-numeric: tabular-nums; }
+    .stat-label { color: var(--muted); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
+
+    .plan { padding-top: 3px; animation: arrive .65s .08s ease-out both; }
+    .plan-header { display: flex; align-items: baseline; justify-content: space-between; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
+    .plan-header h2 { margin: 0; font-family: var(--display); font-size: 24px; font-weight: 400; }
+    .plan-count { color: var(--muted); font-size: 10px; font-weight: 700; letter-spacing: .1em; }
+    .session-list { margin: 0; padding: 0; list-style: none; }
+    .session-row {
+      position: relative;
+      display: grid;
+      grid-template-columns: 34px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 11px;
+      min-height: 69px;
+      border-bottom: 1px solid var(--line);
+      transition: opacity .2s ease;
+    }
+    .row-number { color: #87928a; font-family: var(--display); font-size: 16px; }
+    .row-title { display: block; margin-bottom: 4px; font-size: 12px; font-weight: 700; }
+    .row-detail { display: block; color: var(--muted); font-size: 10px; }
+    .row-state { color: #87928a; font-size: 9px; font-weight: 700; letter-spacing: .08em; }
+    .session-row.active .row-number, .session-row.active .row-state { color: var(--focus); }
+    .session-row.active[data-kind="break"] .row-number, .session-row.active[data-kind="break"] .row-state { color: var(--rest); }
+    .session-row.done .row-state { color: var(--rest); }
+    .more-sessions { margin: 14px 0 0; color: var(--muted); font-size: 11px; }
+
+    .break-note { display: flex; align-items: flex-start; gap: 12px; margin-top: 30px; padding-top: 18px; border-top: 1px solid var(--line); }
+    .break-note-mark { flex: 0 0 auto; width: 22px; height: 22px; border: 1px solid var(--rest); border-radius: 50%; position: relative; }
+    .break-note-mark::before { position: absolute; inset: 5px; border-radius: 50%; background: var(--rest); content: ""; }
+    .break-note strong { display: block; margin-bottom: 5px; font-size: 11px; }
+    .break-note span { display: block; color: var(--muted); font-size: 10px; line-height: 1.55; }
+
+    footer { display: flex; justify-content: space-between; gap: 18px; padding: 18px 0 25px; color: var(--muted); font-size: 10px; }
+    footer span:last-child { text-align: right; }
+
+    @keyframes arrive { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
+    }
+    @media (max-width: 780px) {
+      .page { width: min(100% - 40px, 600px); }
+      .content { padding-top: 38px; }
+      .dashboard { grid-template-columns: minmax(0, 1fr); gap: 48px; }
+      .intro { align-items: flex-start; }
+      h1 { font-size: 38px; }
+      .plan { display: grid; grid-template-columns: minmax(0, 1fr) minmax(180px, .7fr); gap: 0 28px; }
+      .plan-header, .session-list, .more-sessions { grid-column: 1; }
+      .break-note { grid-column: 2; grid-row: 1 / span 3; align-self: start; margin-top: 0; }
+    }
+    @media (max-width: 520px) {
+      .page { width: calc(100% - 32px); }
+      .topbar { min-height: 70px; }
+      .date-label { max-width: 120px; text-align: right; line-height: 1.45; }
+      .content { padding-top: 31px; }
+      .intro { flex-direction: column; gap: 23px; margin-bottom: 29px; }
+      h1 { font-size: 35px; }
+      .intro-note { font-size: 13px; }
+      .session-picker { width: 100%; justify-content: space-between; padding: 12px 0 0; border-top: 1px solid var(--line); border-left: 0; }
+      .session-picker label { max-width: none; }
+      .timer-ring { width: 232px; }
+      .timer-area { min-height: 310px; }
+      .timer-value { font-size: 58px; }
+      .plan { display: block; }
+      .break-note { margin-top: 26px; }
+      footer { flex-direction: column; gap: 6px; }
+      footer span:last-child { text-align: left; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="topbar">
+      <div class="brand" aria-label="Pomodoro Habit Time Tracker">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <div>
+          <div class="brand-name">POMODORO</div>
+          <div class="brand-caption">HABIT TIME TRACKER</div>
+        </div>
+      </div>
+      <div class="date-label" id="today"></div>
+    </header>
+
+    <main class="content">
+      <section class="intro" aria-labelledby="page-title">
+        <div>
+          <p class="eyebrow">A LITTLE STRUCTURE, A BETTER RHYTHM</p>
+          <h1 id="page-title">Make room for focus.</h1>
+          <p class="intro-note">One focused block at a time.</p>
+        </div>
+        <div class="session-picker">
+          <label for="session-count">Sessions in today's plan</label>
+          <input id="session-count" type="number" min="1" step="1" value="4" inputmode="numeric">
+        </div>
+      </section>
+
+      <div class="dashboard">
+        <section class="timer-section" aria-label="Pomodoro timer">
+          <div class="timer-heading">
+            <div class="phase-label" id="phase-label" data-kind="work">
+              <span class="phase-dot" aria-hidden="true"></span>
+              <span id="phase-name">FOCUS</span>
+            </div>
+            <span class="session-kicker" id="session-position">SESSION 01 / 04</span>
+          </div>
+
+          <div class="timer-area">
+            <div class="timer-ring" id="timer-ring" role="timer" aria-live="off" aria-label="25 minutes remaining">
+              <div class="timer-core">
+                <span class="timer-mode" id="timer-mode">FOCUS SESSION</span>
+                <span class="timer-value" id="timer-value">25:00</span>
+                <span class="timer-caption" id="timer-caption">Stay with this moment</span>
+              </div>
+            </div>
+            <div class="controls">
+              <button class="button button-primary" id="start-button" type="button">Start focus</button>
+              <button class="button button-secondary" id="reset-button" type="button">Reset</button>
+            </div>
+          </div>
+
+          <div class="stats" aria-label="Today's progress">
+            <div class="stat">
+              <span class="stat-value" id="focused-total">0 min</span>
+              <span class="stat-label">Focused today</span>
+            </div>
+            <div class="stat">
+              <span class="stat-value" id="sessions-complete">0 / 4</span>
+              <span class="stat-label">Sessions focused</span>
+            </div>
+          </div>
+        </section>
+
+        <aside class="plan" aria-labelledby="plan-title">
+          <div class="plan-header">
+            <h2 id="plan-title">Today's plan</h2>
+            <span class="plan-count" id="plan-count">04 BLOCKS</span>
+          </div>
+          <ol class="session-list" id="session-list"></ol>
+          <p class="more-sessions" id="more-sessions" hidden></p>
+          <div class="break-note">
+            <span class="break-note-mark" aria-hidden="true"></span>
+            <div>
+              <strong>Make the pause count.</strong>
+              <span>Take five minutes between work blocks. After every fourth session, your break extends to fifteen.</span>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </main>
+
+    <footer>
+      <span>Pomodoro Habit Time Tracker</span>
+      <span>Focus 25 min&nbsp;&nbsp;·&nbsp;&nbsp;Short break 5 min&nbsp;&nbsp;·&nbsp;&nbsp;Long break 15 min</span>
+    </footer>
+  </div>
+
+  <script>
+    const durations = { work: 25 * 60, short_break: 5 * 60, long_break: 15 * 60 };
+    const sessionInput = document.getElementById("session-count");
+    const stageNames = { work: "FOCUS", short_break: "SHORT BREAK", long_break: "LONG BREAK" };
+    const stageCaptions = { work: "Stay with this moment", short_break: "Step away for a little while", long_break: "Take a proper rest" };
+
+    let sessionCount = 4;
+    let plan = [];
+    let stageIndex = 0;
+    let secondsRemaining = durations.work;
+    let focusedSeconds = 0;
+    let completedSessions = 0;
+    let intervalId = null;
+    let isComplete = false;
+
+    function buildPlan(count) {
+      const activities = [];
+      for (let session = 1; session <= count; session += 1) {
+        activities.push({ type: "work", session, duration: durations.work });
+        activities.push({
+          type: session % 4 === 0 ? "long_break" : "short_break",
+          session,
+          duration: session % 4 === 0 ? durations.long_break : durations.short_break
+        });
+      }
+      return activities;
+    }
+
+    function formatTime(seconds) {
+      const minutes = Math.floor(seconds / 60).toString().padStart(2, "0");
+      const remainder = (seconds % 60).toString().padStart(2, "0");
+      return `${minutes}:${remainder}`;
+    }
+
+    function currentStage() {
+      return plan[stageIndex] || null;
+    }
+
+    function renderPlan() {
+      const list = document.getElementById("session-list");
+      const more = document.getElementById("more-sessions");
+      const visibleCount = Math.min(sessionCount, 5);
+      list.replaceChildren();
+
+      for (let session = 1; session <= visibleCount; session += 1) {
+        const active = !isComplete && currentStage()?.session === session;
+        const done = !active && completedSessions >= session;
+        const breakType = session % 4 === 0 ? "long_break" : "short_break";
+        const breakMinutes = durations[breakType] / 60;
+        const item = document.createElement("li");
+        item.className = `session-row${active ? " active" : ""}${done ? " done" : ""}`;
+        if (active) item.dataset.kind = currentStage().type === "work" ? "work" : "break";
+        item.innerHTML = `<span class="row-number">${String(session).padStart(2, "0")}</span>
+          <span><span class="row-title">Session ${session}</span><span class="row-detail">Focus 25 min · Break ${breakMinutes} min</span></span>
+          <span class="row-state">${active ? (currentStage().type === "work" ? "NOW" : "ON BREAK") : done ? "DONE" : "UP NEXT"}</span>`;
+        list.append(item);
+      }
+
+      const remaining = sessionCount - visibleCount;
+      more.hidden = remaining < 1;
+      more.textContent = remaining > 0 ? `And ${remaining} more ${remaining === 1 ? "session" : "sessions"}` : "";
+      document.getElementById("plan-count").textContent = `${String(sessionCount).padStart(2, "0")} ${sessionCount === 1 ? "BLOCK" : "BLOCKS"}`;
+    }
+
+    function render() {
+      const stage = isComplete ? null : currentStage();
+      const phaseLabel = document.getElementById("phase-label");
+      const ring = document.getElementById("timer-ring");
+      const startButton = document.getElementById("start-button");
+      const progress = stage ? (1 - secondsRemaining / stage.duration) * 100 : 100;
+
+      phaseLabel.dataset.kind = stage && stage.type !== "work" ? "break" : "work";
+      document.getElementById("phase-name").textContent = isComplete ? "COMPLETE" : stageNames[stage.type];
+      document.getElementById("session-position").textContent = stage
+        ? `SESSION ${String(stage.session).padStart(2, "0")} / ${String(sessionCount).padStart(2, "0")}`
+        : `${String(sessionCount).padStart(2, "0")} SESSIONS FINISHED`;
+      document.getElementById("timer-mode").textContent = stage ? stageNames[stage.type] : "WELL DONE";
+      document.getElementById("timer-value").textContent = formatTime(stage ? secondsRemaining : 0);
+      document.getElementById("timer-caption").textContent = stage
+        ? stageCaptions[stage.type]
+        : "Your planned sessions are complete";
+      ring.dataset.kind = stage && stage.type !== "work" ? "break" : "work";
+      ring.style.setProperty("--progress", Math.max(0, Math.min(100, progress)));
+      ring.setAttribute("aria-label", stage ? `${formatTime(secondsRemaining)} remaining` : "All sessions complete");
+      startButton.textContent = isComplete ? "All done" : intervalId ? "Pause timer" : stage?.type === "work" ? "Start focus" : "Start break";
+      startButton.disabled = isComplete;
+      sessionInput.disabled = Boolean(intervalId);
+      document.getElementById("focused-total").textContent = `${Math.floor(focusedSeconds / 60)} min`;
+      document.getElementById("sessions-complete").textContent = `${completedSessions} / ${sessionCount}`;
+      renderPlan();
+    }
+
+    function advanceStage() {
+      if (stageIndex >= plan.length - 1) {
+        isComplete = true;
+        clearInterval(intervalId);
+        intervalId = null;
+      } else {
+        stageIndex += 1;
+        secondsRemaining = plan[stageIndex].duration;
+      }
+      render();
+    }
+
+    function tick() {
+      const stage = currentStage();
+      if (!stage) return;
+      if (stage.type === "work") focusedSeconds += 1;
+      secondsRemaining -= 1;
+      if (secondsRemaining <= 0) {
+        if (stage.type === "work") completedSessions += 1;
+        advanceStage();
+      } else {
+        render();
+      }
+    }
+
+    function resetTimer() {
+      clearInterval(intervalId);
+      intervalId = null;
+      stageIndex = 0;
+      secondsRemaining = plan[0].duration;
+      focusedSeconds = 0;
+      completedSessions = 0;
+      isComplete = false;
+      render();
+    }
+
+    document.getElementById("start-button").addEventListener("click", () => {
+      if (isComplete) return;
+      if (intervalId) {
+        clearInterval(intervalId);
+        intervalId = null;
+      } else {
+        intervalId = window.setInterval(tick, 1000);
+      }
+      render();
+    });
+
+    document.getElementById("reset-button").addEventListener("click", resetTimer);
+    sessionInput.addEventListener("change", () => {
+      const count = Number(sessionInput.value);
+      if (!Number.isInteger(count) || count < 1) {
+        sessionInput.value = sessionCount;
+        return;
+      }
+      sessionCount = count;
+      plan = buildPlan(sessionCount);
+      resetTimer();
+    });
+
+    document.getElementById("today").textContent = new Intl.DateTimeFormat("en", {
+      weekday: "long", month: "long", day: "numeric"
+    }).format(new Date());
+
+    plan = buildPlan(sessionCount);
+    render();
+  </script>
+</body>
+</html>

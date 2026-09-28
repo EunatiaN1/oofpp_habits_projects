@@ -1,6 +1,6 @@
 # Pomodoro Habit Time Tracker
 
-A Python-based Pomodoro tracker that helps users stay focused by cycling through work sessions and planned breaks.
+A command-line focus timer that guides you through 25-minute work sessions, 5-minute short breaks, and a 15-minute break after every fourth session. Choose how many sessions to complete, follow the live countdown, and review your total focused time when you're done.
 
 ## Features
 - 25-minute focus sessions
@@ -12,6 +12,7 @@ A Python-based Pomodoro tracker that helps users stay focused by cycling through
 ## Files
 - `main.py` - main Pomodoro application
 - `test_pomodoro.py` - validation tests for timer logic
+- `preview.html` - standalone browser preview of the timer interface
 
 ## Run
 ```bash
