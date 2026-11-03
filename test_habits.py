@@ -113,10 +113,11 @@ def test_analytics_rejects_empty_window():
 
 def test_cli_supports_init_create_complete_analyze_and_delete(tmp_path, capsys):
     database = str(tmp_path / "habits.sqlite3")
+    today = date.today().isoformat()
 
     assert main(["--db", database, "init", "--no-sample-data"]) == 0
     assert main(["--db", database, "create", "Walk", "--period", "daily"]) == 0
-    assert main(["--db", database, "complete", "Walk", "--date", "2026-09-28"]) == 0
+    assert main(["--db", database, "complete", "Walk", "--date", today]) == 0
     assert main(["--db", database, "analyze", "Walk", "--days", "1"]) == 0
     assert "Walk (daily): 100% (1/1 periods)" in capsys.readouterr().out
     assert main(["--db", database, "delete", "Walk"]) == 0
