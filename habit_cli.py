@@ -39,7 +39,19 @@ def build_parser() -> argparse.ArgumentParser:
 
     complete = commands.add_parser("complete", help="Record a habit completion")
     complete.add_argument("name", help="Habit name")
-    complete.add_argument("--date", help="Completion date in YYYY-MM-DD format (default: today)")
+    completion_time = complete.add_mutually_exclusive_group()
+    completion_time.add_argument(
+        "--date",
+        help="Completion date in YYYY-MM-DD format; the current local time is used",
+    )
+    completion_time.add_argument(
+        "--at",
+        dest="completed_at",
+        help="Completion timestamp in ISO 8601 format with a timezone",
+    )
+
+    history = commands.add_parser("history", help="Show recorded completion dates and times")
+    history.add_argument("name", nargs="?", help="Habit name (omit to show all habits)")
 
     analyze = commands.add_parser(
         "analyze",
@@ -73,6 +85,26 @@ def _print_analysis(store: HabitStore, name: str | None, days: int) -> None:
         )
 
 
+def _print_history(store: HabitStore, name: str | None) -> None:
+    habits = [store.get_habit(name)] if name else store.list_habits()
+    if not habits:
+        print("No habits found.")
+        return
+
+    has_records = False
+    for habit in habits:
+        for completion in store.completion_records(habit.name):
+            has_records = True
+            timestamp = (
+                completion.completed_at.isoformat(timespec="seconds")
+                if completion.completed_at is not None
+                else "time unavailable (legacy entry)"
+            )
+            print(f"{habit.name}: {timestamp}")
+    if not has_records:
+        print("No completions recorded.")
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -92,7 +124,15 @@ def main(argv: Sequence[str] | None = None) -> int:
                     print("No habits found. Run 'python3 habit_cli.py init' to add the predefined habits.")
                 for habit in habits:
                     description = f" - {habit.description}" if habit.description else ""
-                    print(f"{habit.name} [{habit.period}]{description}")
+                    created = (
+                        habit.created_timestamp.isoformat(timespec="seconds")
+                        if habit.created_timestamp is not None
+                        else f"{habit.created_at.isoformat()} (time unavailable)"
+                    )
+                    print(
+                        f"{habit.name} [{habit.period}] "
+                        f"created {created}{description}"
+                    )
             elif args.command == "create":
                 habit = store.create_habit(args.name, args.period, args.description)
                 print(f"Created {habit.name} ({habit.period}).")
@@ -100,11 +140,17 @@ def main(argv: Sequence[str] | None = None) -> int:
                 store.delete_habit(args.name)
                 print(f"Deleted {args.name} and its completion history.")
             elif args.command == "complete":
-                recorded = store.record_completion(args.name, args.date)
+                recorded = store.record_completion(
+                    args.name,
+                    args.date,
+                    completed_at=args.completed_at,
+                )
                 if recorded:
                     print(f"Recorded completion for {args.name}.")
                 else:
                     print(f"{args.name} is already complete for that date or week.")
+            elif args.command == "history":
+                _print_history(store, args.name)
             elif args.command in ("analyze", "analyse"):
                 if args.days < 1:
                     raise ValueError("Analysis window must be at least one day.")
