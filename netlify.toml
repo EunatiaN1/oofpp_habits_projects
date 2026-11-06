@@ -1,0 +1,10 @@
+# Publish only the Pomodoro Habit Time Tracker page (preview.html) as the site's home page.
+[build]
+  command = "mkdir -p dist && cp preview.html dist/index.html"
+  publish = "dist"
+
+# Keep the original /preview.html URL working too.
+[[redirects]]
+  from = "/preview.html"
+  to = "/"
+  status = 301
